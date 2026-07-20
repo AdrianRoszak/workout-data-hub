@@ -4,3 +4,5 @@
 crash.log
 crash.*.log
 *.tfvars
+
+.vscode/
