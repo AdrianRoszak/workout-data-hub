@@ -6,3 +6,5 @@ crash.*.log
 *.tfvars
 
 .vscode/
+__pycache__/
+*.pyc
