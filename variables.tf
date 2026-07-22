@@ -21,3 +21,9 @@ variable "strava_refresh_token" {
   type        = string
   sensitive   = true
 }
+
+variable "strava_verify_token" {
+  description = "Secret token used by Strava to authenticate webhook subscription callback. Must match the verify_token configured in the Strava API subscription."
+  type        = string
+  sensitive   = true
+}

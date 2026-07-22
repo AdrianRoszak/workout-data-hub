@@ -15,6 +15,7 @@ http = urllib3.PoolManager()
 TOPIC_ARN = os.environ.get('SNS_TOPIC_ARN')
 TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME', 'StravaActivities')
 SECRET_NAME = os.environ.get('SECRET_NAME')
+VERIFY_TOKEN = os.environ.get('VERIFY_TOKEN')
 
 # Cache sekretu w pamięci procesu – pobieramy RAZ z Secrets Manager, potem trzymamy w RAM
 _cached_secrets = None
@@ -75,6 +76,10 @@ def lambda_handler(event, context):
     query_params = event.get('queryStringParameters') or {}
     if "hub.challenge" in query_params:
         print("Webhook verification challenge received.")
+
+        if query_params.get('hub.verify_token') != VERIFY_TOKEN:
+            print(f"Invalid verify_token! Got {query_params.get('hub.verify_token')}")
+            return {'statusCode': 403, 'body': 'Forbidden'}
         return {
             'statusCode': 200,
             'body': json.dumps({"hub.challenge": query_params.get('hub.challenge')})
@@ -87,82 +92,75 @@ def lambda_handler(event, context):
         if body.get('object_type') == 'activity' and body.get('aspect_type') == 'create':
             activity_id = body.get('object_id')
             athlete_id = body.get('owner_id')
-            
-            table = dynamodb.Table(TABLE_NAME)
-            pk = f"USER#{athlete_id}"
-            sk = f"ACTIVITY#{activity_id}"
-            
-            # --- ZABEZPIECZENIE PRZED DUPLIKATAMI (IDEMPOTENCY) ---
-            # Wrzucamy najpierw lekki rekord blokady. Jeśli klucz istnieje, DynamoDB rzuci wyjątek.
-            try:
-                table.put_item(
-                    Item={
-                        'pk': pk,
-                        'sk': sk,
-                        'timestamp': int(time.time()),
-                        'status': 'PROCESSING'
-                    },
-                    ConditionExpression="attribute_not_exists(pk) AND attribute_not_exists(sk)"
-                )
-                print(f"Zablokowano ID aktywności: {activity_id}. Rozpoczynam przetwarzanie...")
-            except ClientError as e:
-                if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
-                    print(f"Ignoruję duplikat! Aktywność {activity_id} jest już procesowana lub została zapisana.")
-                    # Zwracamy 200 OK, żeby uciszyć ponawiającą żądania Stravę
-                    return {'statusCode': 200, 'body': 'OK'}
-                else:
-                    print(f"Błąd bazy danych przy weryfikacji duplikatu: {str(e)}")
-                    raise e
 
-            # --- PROCESOWANIE WŁAŚCIWE ---
+            if not activity_id or not athlete_id:
+                print("Missing required fields in webhook payload")
+                return {'statusCode': 400, 'body': 'Bad Request: missing object_id or owner_id'}
+
+            try:
+                int(activity_id)
+            except (ValueError, TypeError):
+                print(f"Invalid object_id format: {activity_id}")
+                return{'statusCode': 400, 'body': 'Bad Request: invalid object_id'}
+
+            try:
+                int(athlete_id)
+            except (ValueError, TypeError):
+                print(f"Invalid owner_id format: {athlete_id}")
+                return{'statusCode': 400, 'body': 'Bad Request: invalid owner_id'}
+            
+            # ---- SPRAWDŹ W API STRAVY PRZED ZAPISEM DO DB ----
             try:
                 token = get_new_access_token()
                 full_details = get_detailed_activity(activity_id, token)
-                item_to_save = json.loads(json.dumps(full_details), parse_float=Decimal)
-                
-                # Aktualizujemy wcześniej utworzony rekord o pełne dane z API
-                table.update_item(
-                    Key={'pk': pk, 'sk': sk},
-                    UpdateExpression="SET raw_data = :rd, #st = :status",
-                    ExpressionAttributeNames={'#st': 'status'},
-                    ExpressionAttributeValues={
-                        ':rd': item_to_save,
-                        ':status': 'COMPLETED'
-                    }
-                )
-                
-                # --- NOTIFICATION LOGIC ---
-                name = full_details.get('name', 'Unknown Activity')
-                distance_km = full_details.get('distance', 0) / 1000
-                duration_min = full_details.get('moving_time', 0) // 60
-                heart_rate = full_details.get('average_heartrate', 'N/A')
-                elevation = full_details.get('total_elevation_gain', 0)
-                
-                email_message = (
-                    f"New Activity Logged: {name}\n"
-                    f"----------------------------------\n"
-                    f"Distance: {distance_km:.2f} km\n"
-                    f"Duration: {duration_min} min\n"
-                    f"Avg HR: {heart_rate} bpm\n"
-                    f"Elevation Gain: {elevation} m\n"
-                    f"----------------------------------\n"
-                    f"Strava Link: https://www.strava.com/activities/{activity_id}"
-                )
-                
-                sns_client.publish(
-                    TopicArn=TOPIC_ARN,
-                    Message=email_message,
-                    Subject=f"Strava: {name}"
-                )
-                print(f"Successfully processed activity {activity_id}")
-
             except Exception as e:
-                print(f"Error processing Strava notification: {str(e)}")
-                # W przypadku wtopy usuwamy blokadę, żeby system mógł ponowić próbę przy następnym evencie
-                try:
-                    table.delete_item(Key={'pk': pk, 'sk': sk})
-                except Exception as del_err:
-                    print(f"Nie udało się zwolnić blokady w DynamoDB: {str(del_err)}")
-                return {'statusCode': 500, 'body': 'Internal Server Error'}
+                print(f"Failed to fetch activity from Strava API: {str(e)}")
+                return {'statusCode': 404, 'body': 'Activity not found or API Error'}
+
+            # ---- SPRAWDŹ DUPLIKAT + ZAPISZ ----
+            table = dynamodb.Table(TABLE_NAME)
+            pk = f"USER#{athlete_id}"
+            sk = f"ACTIVITY#{activity_id}"
+
+            existing = table.get_item(Key={'pk': pk, 'sk': sk})
+            if 'Item' in existing:
+                print(f"Activity {activity_id} already processed - skipping duplicate")
+                return {'statusCode': 200, 'body': 'OK'}
+
+            item_to_save = json.loads(json.dumps(full_details), parse_float=Decimal)
+            table.put_item(
+                Item={
+                    'pk': pk,
+                    'sk': sk,
+                    'raw_data': item_to_save,
+                    'timestamp': int(time.time()),
+                    'status': 'COMPLETED'
+                }
+            )
+
+            # ---- SEND NOTIFICATION ----
+            name = full_details.get('name', 'Unknown Activity')
+            distance_km = full_details.get('distance', 0) / 1000
+            duration_min = full_details.get('moving_time', 0) // 60
+            heart_rate = full_details.get('average_heartrate', 'N/A')
+            elevation = full_details.get('total_elevation_gain', 0)
+
+            email_message = (
+                f"New Activity Logged: {name}\n"
+                f"----------------------------------\n"
+                f"Distance: {distance_km:.2f} km\n"
+                f"Duration: {duration_min} min\n"
+                f"Avg HR: {heart_rate} bpm\n"
+                f"Elevation Gain: {elevation} m\n"
+                f"----------------------------------\n"
+                f"Strava Link: https://www.strava.com/activities/{activity_id}"
+            )
+
+            sns_client.publish(
+                TopicArn=TOPIC_ARN,
+                Message=email_message,
+                Subject=f"Strava: {name}"
+            )
+            print(f"Successfully processed activity {activity_id}")
 
     return {'statusCode': 200, 'body': 'OK'}

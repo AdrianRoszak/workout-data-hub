@@ -15,3 +15,9 @@ variable "strava_refresh_token" {
   type        = string
   sensitive   = true
 }
+
+variable "verify_token" {
+  description = "Prevents unauthorized parties from completing a webhook subscription with our endpoint."
+  type = string
+  sensitive = true
+}

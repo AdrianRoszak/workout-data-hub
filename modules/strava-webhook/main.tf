@@ -43,6 +43,11 @@ resource "aws_apigatewayv2_stage" "strava_webhook" {
   name        = "default"
   auto_deploy = true
   description = "Production stage for the Strava webhook endpoint. Auto-deploys on route/integration changes."
+
+  default_route_settings {
+    throttling_burst_limit = 5
+    throttling_rate_limit = 10
+  }
 }
 
 resource "aws_lambda_permission" "strava_webhook" {
@@ -127,6 +132,7 @@ resource "aws_lambda_function" "strava_webhook" {
       SNS_TOPIC_ARN       = aws_sns_topic.StravaNotifications.arn
       DYNAMODB_TABLE_NAME = aws_dynamodb_table.StravaActivities.name
       SECRET_NAME         = aws_secretsmanager_secret.strava_credentials.name
+      VERIFY_TOKEN        = var.verify_token
     }
   }
 }
