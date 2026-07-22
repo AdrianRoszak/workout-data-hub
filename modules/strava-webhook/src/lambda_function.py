@@ -4,7 +4,6 @@ import os
 import urllib3
 import time
 from decimal import Decimal
-from botocore.exceptions import ClientError
 
 # Inicjalizacja klientów AWS poza handlerem (cold start)
 sns_client = boto3.client('sns')

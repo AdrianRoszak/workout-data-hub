@@ -33,7 +33,7 @@ resource "aws_apigatewayv2_route" "strava_webhook" {
 resource "aws_apigatewayv2_integration" "strava_webhook" {
   api_id                 = aws_apigatewayv2_api.strava_webhook.id
   integration_type       = "AWS_PROXY"
-  integration_uri        = "arn:aws:lambda:eu-central-1:REDACTED_ACCOUNT_ID:function:stravaWebhookHandler"
+  integration_uri        = aws_lambda_function.strava_webhook.invoke_arn
   integration_method     = "POST"
   payload_format_version = "2.0"
 }
