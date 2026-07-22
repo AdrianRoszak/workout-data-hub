@@ -17,7 +17,41 @@ resource "aws_dynamodb_table" "StravaActivities" {
 
 resource "aws_sns_topic" "StravaNotifications" {
   name = "StravaNotifications"
+  kms_master_key_id = "alias/aws/sns"
 }
+
+resource "aws_sns_topic_policy" "strava_notifications" {
+  arn = aws_sns_topic.StravaNotifications.arn
+  policy = data.aws_iam_policy_document.sns_topic_policy.json
+}
+
+data "aws_iam_policy_document" "sns_topic_policy" {
+  statement {
+    effect = "Allow"
+    actions = ["SNS:Publish"]
+    principals {
+      type = "AWS"
+      identifiers = [aws_iam_role.lambda_exec.arn]
+    }
+    resources = [aws_sns_topic.StravaNotifications.arn]
+  }
+
+  statement {
+    effect = "Deny"
+    actions = ["SNS:Publish"]
+    principals {
+      type = "AWS"
+      identifiers = ["*"]
+    }
+    resources = [aws_sns_topic.StravaNotifications.arn]
+    condition {
+      test = "ArnNotEquals"
+      variable = "aws:PrincipalArn"
+      values = [aws_iam_role.lambda_exec.arn]
+    }
+  }
+}
+
 resource "aws_apigatewayv2_api" "strava_webhook" {
   name          = "stravaWebhookHandler-API"
   description   = "HTTP API Gateway v2 endpoint that receives Strava webhook callback (activity create/update/delete) and proxies them to the stravaWebhookHandler Lambda."
