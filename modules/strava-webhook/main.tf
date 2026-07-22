@@ -53,11 +53,60 @@ resource "aws_lambda_permission" "strava_webhook" {
   source_arn = "${aws_apigatewayv2_api.strava_webhook.execution_arn}/*/*/stravaWebhookHandler"
 }
 
+resource "aws_iam_role" "lambda_exec" {
+  name = "stravaWebhookHandler-role-4sow3cz9"
+  path = "/service-role/"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "lambda_strava_access" {
+  name = "StravaWebhookAccess"
+  role = aws_iam_role.lambda_exec.name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:GetItem",
+          "dynamodb:Query",
+          "dynamodb:UpdateItem"
+        ]
+        Resource = aws_dynamodb_table.StravaActivities.arn
+      },
+      {
+        Effect = "Allow"
+        Action = ["sns:Publish"]
+        Resource = aws_sns_topic.StravaNotifications.arn
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = "arn:aws:iam::REDACTED_ACCOUNT_ID:policy/service-role/AWSLambdaBasicExecutionRole-81faff77-b0bd-4d35-8181-b2e6c9a7c4b4"
+}
+
 resource "aws_lambda_function" "strava_webhook" {
   function_name = "stravaWebhookHandler"
   runtime = "python3.14"
   handler = "lambda_function.lambda_handler"
-  role = "arn:aws:iam::REDACTED_ACCOUNT_ID:role/service-role/stravaWebhookHandler-role-4sow3cz9"
+  role = aws_iam_role.lambda_exec.arn
   filename = "${path.module}/src/lambda_function.zip"
   source_code_hash = filebase64sha256("${path.module}/src/lambda_function.zip")
   timeout = 3
