@@ -27,6 +27,7 @@ resource "aws_sns_topic_policy" "strava_notifications" {
 
 data "aws_iam_policy_document" "sns_topic_policy" {
   statement {
+    sid = "AllowLambdaToPublish"
     effect = "Allow"
     actions = ["SNS:Publish"]
     principals {
@@ -37,6 +38,7 @@ data "aws_iam_policy_document" "sns_topic_policy" {
   }
 
   statement {
+    sid = "DenyAllOthersPublish"
     effect = "Deny"
     actions = ["SNS:Publish"]
     principals {
