@@ -34,4 +34,8 @@ resource "aws_s3_bucket_versioning" "terraform_state_bucket_versioning" {
 
 module "strava_webhook" {
   source = "./modules/strava-webhook"
+
+  strava_client_id     = var.strava_client_id
+  strava_client_secret = var.strava_client_secret
+  strava_refresh_token = var.strava_refresh_token
 }

@@ -1,4 +1,4 @@
-# 🏃 training-data-platform
+# 🏃 workout-data-hub
 
 A serverless data platform for ingesting, storing, and processing workout data from Strava and other fitness services. Managed with Terraform on AWS.
 
@@ -78,8 +78,8 @@ AWSLambdaBasicExecutionRole
 
 ```bash
 # 1. Clone the repository
-git clone git@github.com:AdrianRoszak/training-data-platform.git
-cd training-data-platform
+git clone git@github.com:AdrianRoszak/workout-data-hub.git
+cd workout-data-hub
 
 # 2. Initialize – downloads providers
 terraform init
@@ -123,7 +123,7 @@ State locking is enabled (`use_lockfile = true`), preventing concurrent modifica
 The project will grow with additional services in a microservices architecture. Each with its own Terraform state:
 
 ```
-training-data-platform/
+workout-data-hub/
 ├── ingestion/          ← current code (Strava webhook ingestion)
 │   └── terraform.tfstate    (S3 key: ingestion/terraform.tfstate)
 │
