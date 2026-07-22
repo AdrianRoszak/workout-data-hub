@@ -20,11 +20,6 @@ provider "aws" {
   profile = "Weirdo"
 }
 
-module "website" {
-  source      = "./modules/s3-cloudfront-website"
-  bucket_name = local.bucket_name
-}
-
 resource "aws_s3_bucket" "terraform_state_bucket" {
   bucket = local.terraform_state_bucket_name
 }
