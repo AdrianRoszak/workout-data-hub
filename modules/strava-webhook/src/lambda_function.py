@@ -116,6 +116,11 @@ def lambda_handler(event, context):
                 print(f"Failed to fetch activity from Strava API: {str(e)}")
                 return {'statusCode': 404, 'body': 'Activity not found or API Error'}
 
+            strava_athlete_id = full_details.get('athlete', {}).get('id')
+            if int(athlete_id) != strava_athlete_id:
+                print(f"Owner mismatch!")
+                return {'statusCode': 403, 'body': 'Forbidden owner mismatch'}
+
             # ---- SPRAWDŹ DUPLIKAT + ZAPISZ ----
             table = dynamodb.Table(TABLE_NAME)
             pk = f"USER#{athlete_id}"
