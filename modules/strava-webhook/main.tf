@@ -84,7 +84,8 @@ resource "aws_iam_role_policy" "lambda_strava_access" {
           "dynamodb:PutItem",
           "dynamodb:GetItem",
           "dynamodb:Query",
-          "dynamodb:UpdateItem"
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem"
         ]
         Resource = aws_dynamodb_table.StravaActivities.arn
       },
