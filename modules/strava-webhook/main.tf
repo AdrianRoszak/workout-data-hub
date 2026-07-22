@@ -55,7 +55,7 @@ resource "aws_lambda_permission" "strava_webhook" {
 
 resource "aws_lambda_function" "strava_webhook" {
   function_name = "stravaWebhookHandler"
-  runtime = "python3.13"
+  runtime = "python3.14"
   handler = "lambda_function.lambda_handler"
   role = "arn:aws:iam::REDACTED_ACCOUNT_ID:role/service-role/stravaWebhookHandler-role-4sow3cz9"
   filename = "${path.module}/src/lambda_function.zip"
