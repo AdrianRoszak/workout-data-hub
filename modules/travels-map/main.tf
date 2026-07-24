@@ -133,11 +133,12 @@ resource "aws_s3_bucket_public_access_block" "cloudfront_logs" {
 }
 
 resource "aws_cloudfront_distribution" "travels_map" {
-  comment = "CloudFront distribution for travels.weirdo.codes – serves Leaflet.js frontend from S3 and proxies /api/* to API Gateway"
-  enabled = true
-  is_ipv6_enabled = true
-  price_class = "PriceClass_100"
-  aliases = ["${var.subdomain}.${var.domain_name}"]
+  comment             = "CloudFront distribution for travels.weirdo.codes – serves Leaflet.js frontend from S3 and proxies /api/* to API Gateway"
+  enabled             = true
+  is_ipv6_enabled     = true
+  price_class         = "PriceClass_100"
+  aliases             = ["${var.subdomain}.${var.domain_name}"]
+  default_root_object = "index.html"
 
   logging_config {
     bucket          = aws_s3_bucket.cloudfront_logs.bucket_regional_domain_name
