@@ -4,6 +4,10 @@ resource "aws_dynamodb_table" "StravaActivities" {
   hash_key     = "pk"
   range_key    = "sk"
 
+  point_in_time_recovery {
+    enabled = true
+  }
+
   attribute {
     name = "pk"
     type = "S"
@@ -13,6 +17,7 @@ resource "aws_dynamodb_table" "StravaActivities" {
     name = "sk"
     type = "S"
   }
+
 }
 
 resource "aws_sns_topic" "StravaNotifications" {
@@ -159,7 +164,7 @@ resource "aws_lambda_function" "strava_webhook" {
   role             = aws_iam_role.lambda_exec.arn
   filename         = "${path.module}/src/lambda_function.zip"
   source_code_hash = filebase64sha256("${path.module}/src/lambda_function.zip")
-  timeout          = 30
+  timeout          = 29
   memory_size      = 256
   architectures    = ["arm64"]
 

@@ -73,6 +73,15 @@ resource "aws_s3_bucket" "travels_map_front" {
   bucket = "travels-map-weirdo-bucket-REDACTED_ACCOUNT_ID"
 }
 
+resource "aws_s3_bucket_public_access_block" "travels_map_front" {
+  bucket = aws_s3_bucket.travels_map_front.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
 resource "aws_s3_bucket_versioning" "travels_map_front_versioning" {
   bucket = aws_s3_bucket.travels_map_front.id
 
