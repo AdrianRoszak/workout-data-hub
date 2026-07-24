@@ -14,7 +14,7 @@ output "s3_bucket_name" {
 }
 
 
-output "cloudfront_cname_target" {
-  value       = aws_cloudfront_distribution.travels_map.domain_name
-  description = "Add a CNAME record in Vercel: travels → this value. After that, also add the ACM validation CNAME emailed to the domain owner."
+output "site_url" {
+  value       = "https://${var.subdomain}.${var.domain_name}"
+  description = "URL of the travels map site (available after NS migration to AWS)"
 }

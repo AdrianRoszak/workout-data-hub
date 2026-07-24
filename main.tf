@@ -41,6 +41,33 @@ resource "aws_s3_bucket_versioning" "terraform_state_bucket_versioning" {
   }
 }
 
+resource "aws_route53_zone" "weirdo_codes" {
+  name    = "weirdo.codes"
+  comment = "Primary hosted zone for weirdo.codes"
+}
+
+# MX — Zoho mail
+resource "aws_route53_record" "weirdo_mx" {
+  zone_id = aws_route53_zone.weirdo_codes.zone_id
+  name    = "weirdo.codes"
+  type    = "MX"
+  ttl     = 3600
+  records = [
+    "10 mx.zoho.eu.",
+    "20 mx2.zoho.eu.",
+    "50 mx3.zoho.eu.",
+  ]
+}
+
+# SPF — Zoho
+resource "aws_route53_record" "weirdo_spf" {
+  zone_id = aws_route53_zone.weirdo_codes.zone_id
+  name    = "weirdo.codes"
+  type    = "TXT"
+  ttl     = 3600
+  records = ["v=spf1 include:zoho.eu ~all"]
+}
+
 module "strava_webhook" {
   source = "./modules/strava-webhook"
 
