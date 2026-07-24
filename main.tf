@@ -68,6 +68,17 @@ resource "aws_route53_record" "weirdo_spf" {
   records = ["v=spf1 include:zoho.eu ~all"]
 }
 
+# DKIM — Zoho (zmail selector)
+resource "aws_route53_record" "weirdo_dkim" {
+  zone_id = aws_route53_zone.weirdo_codes.zone_id
+  name    = "zmail._domainkey.weirdo.codes"
+  type    = "TXT"
+  ttl     = 3600
+  records = [
+    "v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCA/3WxPUURq6owUyy2OwJSHbmkqd9oOyywRUosDscI6Ejuj43OznCM4dC99MOJwF5Nk6VeZw1HkDV9Or6HslMmiOj1ukJif5/0LkWrapmevD9ebqTbecDpL6so1GvCG59s0RFnchjq0Uf3/pXBRjL0FZfQTFgHTkLE6LBVzLeprwIDAQAB"
+  ]
+}
+
 module "strava_webhook" {
   source = "./modules/strava-webhook"
 
