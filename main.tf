@@ -80,5 +80,6 @@ module "strava_webhook" {
 module "travels_map" {
   source = "./modules/travels-map"
 
-  athlete_id = var.strava_athlete_id
+  athlete_id      = var.strava_athlete_id
+  route53_zone_id = aws_route53_zone.weirdo_codes.zone_id
 }

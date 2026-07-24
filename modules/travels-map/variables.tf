@@ -20,3 +20,8 @@ variable "athlete_id" {
   description = "Strava athelete ID used to query DynamoDB activities"
   type = string
 }
+
+variable "route53_zone_id" {
+  description = "Route 53 hosted zone ID for weirdo.codes"
+  type        = string
+}

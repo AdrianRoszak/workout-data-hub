@@ -250,7 +250,7 @@ resource "aws_route53_record" "acm_validation" {
     }
   }
 
-  zone_id = data.aws_route53_zone.weirdo_codes.zone_id
+  zone_id = var.route53_zone_id
   name    = each.value.name
   type    = each.value.type
   ttl     = 60
@@ -271,13 +271,8 @@ resource "aws_s3_bucket_website_configuration" "travels_map_front" {
   }
 }
 
-data "aws_route53_zone" "weirdo_codes" {
-  name         = var.domain_name
-  private_zone = false
-}
-
 resource "aws_route53_record" "travels" {
-  zone_id = data.aws_route53_zone.weirdo_codes.zone_id
+  zone_id = var.route53_zone_id
   name    = var.subdomain
   type    = "A"
 
