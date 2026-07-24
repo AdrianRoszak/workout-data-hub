@@ -173,7 +173,6 @@ resource "aws_lambda_function" "strava_webhook" {
       SNS_TOPIC_ARN       = aws_sns_topic.StravaNotifications.arn
       DYNAMODB_TABLE_NAME = aws_dynamodb_table.StravaActivities.name
       SECRET_NAME         = aws_secretsmanager_secret.strava_credentials.name
-      VERIFY_TOKEN        = var.verify_token
     }
   }
 }
@@ -189,5 +188,6 @@ resource "aws_secretsmanager_secret_version" "strava_credentials" {
     STRAVA_CLIENT_ID     = var.strava_client_id
     STRAVA_CLIENT_SECRET = var.strava_client_secret
     STRAVA_REFRESH_TOKEN = var.strava_refresh_token
+    STRAVA_VERIFY_TOKEN = var.verify_token
   })
 }

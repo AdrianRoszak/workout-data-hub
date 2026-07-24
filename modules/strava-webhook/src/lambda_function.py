@@ -14,7 +14,6 @@ http = urllib3.PoolManager()
 TOPIC_ARN = os.environ.get('SNS_TOPIC_ARN')
 TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME', 'StravaActivities')
 SECRET_NAME = os.environ.get('SECRET_NAME')
-VERIFY_TOKEN = os.environ.get('VERIFY_TOKEN')
 
 # Cache sekretu w pamięci procesu – pobieramy RAZ z Secrets Manager, potem trzymamy w RAM
 _cached_secrets = None
@@ -76,7 +75,8 @@ def lambda_handler(event, context):
     if "hub.challenge" in query_params:
         print("Webhook verification challenge received.")
 
-        if query_params.get('hub.verify_token') != VERIFY_TOKEN:
+        creds = get_strava_credentials()
+        if query_params.get('hub.verify_token') != creds.get('STRAVA_VERIFY_TOKEN'):
             print(f"Invalid verify_token! Got {query_params.get('hub.verify_token')}")
             return {'statusCode': 403, 'body': 'Forbidden'}
         return {
