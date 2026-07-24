@@ -231,13 +231,36 @@ data "aws_dynamodb_table" "strava_activities" {
 }
 
 resource "aws_acm_certificate" "travels_map" {
-  provider = aws.virginia
-  domain_name = "${var.subdomain}.${var.domain_name}"
+  provider          = aws.virginia
+  domain_name       = "${var.subdomain}.${var.domain_name}"
   validation_method = "DNS"
 
   lifecycle {
     create_before_destroy = true
   }
+}
+
+# DNS validation record for ACM certificate — created in the Route 53 hosted zone
+resource "aws_route53_record" "acm_validation" {
+  for_each = {
+    for dvo in aws_acm_certificate.travels_map.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  }
+
+  zone_id = aws_route53_zone.travels_subdomain.zone_id
+  name    = each.value.name
+  type    = each.value.type
+  ttl     = 60
+  records = [each.value.record]
+}
+
+resource "aws_acm_certificate_validation" "travels_map" {
+  provider                = aws.virginia
+  certificate_arn         = aws_acm_certificate.travels_map.arn
+  validation_record_fqdns = [for record in aws_route53_record.acm_validation : record.fqdn]
 }
 
 resource "aws_s3_bucket_website_configuration" "travels_map_front" {
@@ -248,13 +271,16 @@ resource "aws_s3_bucket_website_configuration" "travels_map_front" {
   }
 }
 
-data "aws_route53_zone" "weirdo" {
-  name = var.domain_name
+# Hosted zone ONLY for the subdomain travels.weirdo.codes
+# Parent domain weirdo.codes stays managed by Vercel/Gandi
+resource "aws_route53_zone" "travels_subdomain" {
+  name    = "${var.subdomain}.${var.domain_name}"
+  comment = "Delegated subdomain for the travels map service — NS records must be added in Vercel for the parent domain"
 }
 
 resource "aws_route53_record" "travels" {
-  zone_id = data.aws_route53_zone.weirdo.zone_id
-  name    = var.subdomain
+  zone_id = aws_route53_zone.travels_subdomain.zone_id
+  name    = "${var.subdomain}.${var.domain_name}"
   type    = "A"
 
   alias {
