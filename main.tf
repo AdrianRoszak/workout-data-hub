@@ -46,6 +46,23 @@ resource "aws_route53_zone" "weirdo_codes" {
   comment = "Primary hosted zone for weirdo.codes"
 }
 
+# A — Vercel (strona główna)
+resource "aws_route53_record" "weirdo_a" {
+  zone_id = aws_route53_zone.weirdo_codes.zone_id
+  name    = "weirdo.codes"
+  type    = "A"
+  ttl     = 300
+  records = ["76.76.21.21"]
+}
+
+resource "aws_route53_record" "www_weirdo_a" {
+  zone_id = aws_route53_zone.weirdo_codes.zone_id
+  name    = "www.weirdo.codes"
+  type    = "A"
+  ttl     = 300
+  records = ["76.76.21.21"]
+}
+
 # MX — Zoho mail
 resource "aws_route53_record" "weirdo_mx" {
   zone_id = aws_route53_zone.weirdo_codes.zone_id
