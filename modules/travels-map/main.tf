@@ -186,7 +186,7 @@ resource "aws_cloudfront_origin_access_identity" "travels_map" {
 resource "aws_iam_role" "lambda_exec" {
   name        = "getHikingRoutes-role"
   path        = "/service-role/"
-  description = "Execution role for the getHikingRoutes Lambda – allows reading from DynamoDB and writing CloudWatch logs"
+  description = "Execution role for the getHikingRoutes Lambda - allows reading from DynamoDB and writing CloudWatch logs"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
