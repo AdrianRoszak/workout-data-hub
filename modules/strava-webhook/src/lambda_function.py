@@ -1,15 +1,14 @@
 import json
 import boto3
 import os
-import urllib3
 import time
+import urllib.request
 from decimal import Decimal
 
 # Inicjalizacja klientów AWS poza handlerem (cold start)
 sns_client = boto3.client('sns')
 dynamodb = boto3.resource('dynamodb')
 secrets_client = boto3.client('secretsmanager')
-http = urllib3.PoolManager()
 
 TOPIC_ARN = os.environ.get('SNS_TOPIC_ARN')
 TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME', 'StravaActivities')
@@ -17,6 +16,7 @@ SECRET_NAME = os.environ.get('SECRET_NAME')
 
 # Cache sekretu w pamięci procesu – pobieramy RAZ z Secrets Manager, potem trzymamy w RAM
 _cached_secrets = None
+
 
 def get_strava_credentials():
     """Pobiera dane uwierzytelniające Stravy z AWS Secrets Manager z cache'owaniem."""
@@ -26,6 +26,7 @@ def get_strava_credentials():
         _cached_secrets = json.loads(resp['SecretString'])
     return _cached_secrets
 
+
 def update_refresh_token(new_token):
     """Aktualizuje refresh token w Secrets Manager po rotacji przez Stravę."""
     global _cached_secrets
@@ -34,10 +35,12 @@ def update_refresh_token(new_token):
         SecretString=json.dumps({
             'STRAVA_CLIENT_ID': _cached_secrets['STRAVA_CLIENT_ID'],
             'STRAVA_CLIENT_SECRET': _cached_secrets['STRAVA_CLIENT_SECRET'],
-            'STRAVA_REFRESH_TOKEN': new_token
+            'STRAVA_REFRESH_TOKEN': new_token,
+            'STRAVA_VERIFY_TOKEN': _cached_secrets.get('STRAVA_VERIFY_TOKEN', ''),
         })
     )
     _cached_secrets['STRAVA_REFRESH_TOKEN'] = new_token
+
 
 def get_new_access_token():
     creds = get_strava_credentials()
@@ -49,25 +52,53 @@ def get_new_access_token():
         'grant_type': 'refresh_token'
     }
     encoded_data = json.dumps(data).encode('utf-8')
-    resp = http.request('POST', url, body=encoded_data, headers={'Content-Type': 'application/json'}, timeout=3.0)
-    if resp.status != 200:
-        raise Exception(f"Failed to refresh token: {resp.data.decode('utf-8')}")
-    
-    token_data = json.loads(resp.data.decode('utf-8'))
-    
+    req = urllib.request.Request(
+        url,
+        data=encoded_data,
+        headers={'Content-Type': 'application/json'},
+        method='POST',
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=3.0) as resp:
+            body = resp.read().decode('utf-8')
+            status = resp.status
+    except urllib.error.HTTPError as e:
+        body = e.read().decode('utf-8')
+        status = e.code
+    except Exception as e:
+        raise Exception(f"Failed to refresh token: {str(e)}")
+
+    if status != 200:
+        raise Exception(f"Failed to refresh token: {body}")
+
+    token_data = json.loads(body)
+
     # Strava rotuje refresh token – każda odpowiedź zawiera nowy
     if 'refresh_token' in token_data:
         update_refresh_token(token_data['refresh_token'])
-    
+
     return token_data.get('access_token')
+
 
 def get_detailed_activity(activity_id, access_token):
     url = f"https://www.strava.com/api/v3/activities/{activity_id}"
     headers = {'Authorization': f'Bearer {access_token}'}
-    resp = http.request('GET', url, headers=headers, timeout=4.0)
-    if resp.status != 200:
-        raise Exception(f"Failed to fetch activity details: {resp.data.decode('utf-8')}")
-    return json.loads(resp.data.decode('utf-8'))
+    req = urllib.request.Request(url, headers=headers, method='GET')
+    try:
+        with urllib.request.urlopen(req, timeout=4.0) as resp:
+            body = resp.read().decode('utf-8')
+            status = resp.status
+    except urllib.error.HTTPError as e:
+        body = e.read().decode('utf-8')
+        status = e.code
+    except Exception as e:
+        raise Exception(f"Failed to fetch activity details: {str(e)}")
+
+    if status != 200:
+        raise Exception(f"Failed to fetch activity details: {body}")
+
+    return json.loads(body)
+
 
 def lambda_handler(event, context):
     # 1. Handle Webhook Subscription Verification (GET)
@@ -87,7 +118,7 @@ def lambda_handler(event, context):
     # 2. Process Incoming Activity Notification (POST)
     if event.get('body'):
         body = json.loads(event['body'])
-        
+
         if body.get('object_type') == 'activity' and body.get('aspect_type') == 'create':
             activity_id = body.get('object_id')
             athlete_id = body.get('owner_id')
@@ -100,14 +131,14 @@ def lambda_handler(event, context):
                 int(activity_id)
             except (ValueError, TypeError):
                 print(f"Invalid object_id format: {activity_id}")
-                return{'statusCode': 400, 'body': 'Bad Request: invalid object_id'}
+                return {'statusCode': 400, 'body': 'Bad Request: invalid object_id'}
 
             try:
                 int(athlete_id)
             except (ValueError, TypeError):
                 print(f"Invalid owner_id format: {athlete_id}")
-                return{'statusCode': 400, 'body': 'Bad Request: invalid owner_id'}
-            
+                return {'statusCode': 400, 'body': 'Bad Request: invalid owner_id'}
+
             # ---- SPRAWDŹ W API STRAVY PRZED ZAPISEM DO DB ----
             try:
                 token = get_new_access_token()
