@@ -257,12 +257,6 @@ resource "aws_route53_record" "acm_validation" {
   records = [each.value.record]
 }
 
-resource "aws_acm_certificate_validation" "travels_map" {
-  provider                = aws.virginia
-  certificate_arn         = aws_acm_certificate.travels_map.arn
-  validation_record_fqdns = [for record in aws_route53_record.acm_validation : record.fqdn]
-}
-
 resource "aws_s3_bucket_website_configuration" "travels_map_front" {
   bucket = aws_s3_bucket.travels_map_front.id
 
