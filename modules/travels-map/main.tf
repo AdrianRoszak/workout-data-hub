@@ -106,12 +106,44 @@ data "aws_iam_policy_document" "s3_cloudfront_read" {
   }
 }
 
+resource "aws_s3_bucket" "cloudfront_logs" {
+  bucket = "${var.subdomain}-cf-logs-REDACTED_ACCOUNT_ID"
+}
+
+resource "aws_s3_bucket_ownership_controls" "cloudfront_logs" {
+  bucket = aws_s3_bucket.cloudfront_logs.id
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+resource "aws_s3_bucket_acl" "cloudfront_logs" {
+  depends_on = [aws_s3_bucket_ownership_controls.cloudfront_logs]
+  bucket     = aws_s3_bucket.cloudfront_logs.id
+  acl        = "private"
+}
+
+resource "aws_s3_bucket_public_access_block" "cloudfront_logs" {
+  bucket = aws_s3_bucket.cloudfront_logs.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
 resource "aws_cloudfront_distribution" "travels_map" {
   comment = "CloudFront distribution for travels.weirdo.codes – serves Leaflet.js frontend from S3 and proxies /api/* to API Gateway"
   enabled = true
   is_ipv6_enabled = true
   price_class = "PriceClass_100"
   aliases = ["${var.subdomain}.${var.domain_name}"]
+
+  logging_config {
+    bucket          = aws_s3_bucket.cloudfront_logs.bucket_regional_domain_name
+    include_cookies = false
+    prefix          = "cf-logs/"
+  }
 
 #Origin: S3
   origin {
