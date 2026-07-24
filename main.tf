@@ -40,3 +40,9 @@ module "strava_webhook" {
   strava_refresh_token = var.strava_refresh_token
   verify_token = var.strava_verify_token
 }
+
+module "travels_map" {
+  source = "./modules/travels-map"
+
+  athlete_id = var.strava_athlete_id
+}

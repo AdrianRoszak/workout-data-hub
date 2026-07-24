@@ -27,3 +27,8 @@ variable "strava_verify_token" {
   type        = string
   sensitive   = true
 }
+
+variable "strava_athlete_id" {
+  description = "Strava athlete ID used to query DynamoDB activities for the travels map"
+  type        = string
+}
