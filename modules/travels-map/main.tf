@@ -233,28 +233,11 @@ data "aws_dynamodb_table" "strava_activities" {
 resource "aws_acm_certificate" "travels_map" {
   provider          = aws.virginia
   domain_name       = "${var.subdomain}.${var.domain_name}"
-  validation_method = "DNS"
+  validation_method = "EMAIL"
 
   lifecycle {
     create_before_destroy = true
   }
-}
-
-# DNS validation records for ACM certificate — created in the weirdo.codes hosted zone
-resource "aws_route53_record" "acm_validation" {
-  for_each = {
-    for dvo in aws_acm_certificate.travels_map.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
-    }
-  }
-
-  zone_id = var.route53_zone_id
-  name    = each.value.name
-  type    = each.value.type
-  ttl     = 60
-  records = [each.value.record]
 }
 
 resource "aws_s3_bucket_website_configuration" "travels_map_front" {
