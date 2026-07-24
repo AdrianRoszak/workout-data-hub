@@ -13,7 +13,8 @@ output "s3_bucket_name" {
   description = "S3 bucket hosting the Leaflet.js frontend"
 }
 
-output "route53_nameservers" {
-  value       = aws_route53_zone.travels_subdomain.name_servers
-  description = "Route 53 nameservers for travels.weirdo.codes — add these as NS records in Vercel for the parent domain weirdo.codes"
+
+output "cloudfront_cname_target" {
+  value       = aws_cloudfront_distribution.travels_map.domain_name
+  description = "Add a CNAME record in Vercel: travels → this value. After that, also add the ACM validation CNAME emailed to the domain owner."
 }
