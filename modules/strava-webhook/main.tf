@@ -161,7 +161,7 @@ resource "aws_lambda_function" "strava_webhook" {
   source_code_hash = filebase64sha256("${path.module}/src/lambda_function.zip")
   timeout          = 30
   memory_size      = 256
-  architectures    = ["x86_64"]
+  architectures    = ["arm64"]
 
   environment {
     variables = {
