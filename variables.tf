@@ -28,6 +28,11 @@ variable "strava_verify_token" {
   sensitive   = true
 }
 
+variable "aws_account_id" {
+  description = "AWS account ID where resources are deployed (used for S3 backend bucket name and resource naming)"
+  type        = string
+}
+
 variable "strava_athlete_id" {
   description = "Strava athlete ID used to query DynamoDB activities for the travels map"
   type        = string

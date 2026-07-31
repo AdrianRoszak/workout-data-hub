@@ -1,6 +1,6 @@
 terraform {
   backend "s3" {
-    bucket       = "terraform-state-weirdo-bucket-REDACTED_ACCOUNT_ID"
+    bucket       = "terraform-state-weirdo-bucket-${var.aws_account_id}"
     key          = "terraform.tfstate"
     profile      = "Weirdo"
     region       = "eu-central-1"

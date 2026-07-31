@@ -4,6 +4,8 @@ provider "aws" {
   profile = "Weirdo"
 }
 
+data "aws_caller_identity" "current" {}
+
 resource "aws_lambda_function" "get_hiking_routes" {
   function_name = "getHikingRoutes"
   runtime = "python3.14"
@@ -70,7 +72,7 @@ resource "aws_apigatewayv2_stage" "get_hiking_routes" {
 }
 
 resource "aws_s3_bucket" "travels_map_front" {
-  bucket = "travels-map-weirdo-bucket-REDACTED_ACCOUNT_ID"
+  bucket = "travels-map-weirdo-bucket-${data.aws_caller_identity.current.account_id}"
 }
 
 resource "aws_s3_bucket_public_access_block" "travels_map_front" {
@@ -107,7 +109,7 @@ data "aws_iam_policy_document" "s3_cloudfront_read" {
 }
 
 resource "aws_s3_bucket" "cloudfront_logs" {
-  bucket = "${var.subdomain}-cf-logs-REDACTED_ACCOUNT_ID"
+  bucket = "${var.subdomain}-cf-logs-${data.aws_caller_identity.current.account_id}"
 }
 
 resource "aws_s3_bucket_ownership_controls" "cloudfront_logs" {

@@ -1,3 +1,5 @@
+data "aws_caller_identity" "current" {}
+
 resource "aws_dynamodb_table" "StravaActivities" {
   name         = "StravaActivities"
   billing_mode = "PAY_PER_REQUEST"
@@ -154,7 +156,7 @@ resource "aws_iam_role_policy" "lambda_strava_access" {
 
 resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
   role       = aws_iam_role.lambda_exec.name
-  policy_arn = "arn:aws:iam::REDACTED_ACCOUNT_ID:policy/service-role/AWSLambdaBasicExecutionRole-81faff77-b0bd-4d35-8181-b2e6c9a7c4b4"
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
 resource "aws_lambda_function" "strava_webhook" {

@@ -80,15 +80,11 @@ terraform apply
 |---|---|
 | `api_endpoint` | `https://0q9xcv1r6b.execute-api.eu-central-1.amazonaws.com` |
 | `dynamodb_table_name` | `StravaActivities` |
-| `sns_topic_arn` | `arn:aws:sns:eu-central-1:REDACTED_ACCOUNT_ID:StravaNotifications` |
+| `sns_topic_arn` | `arn:aws:sns:eu-central-1:ACCOUNT_ID:StravaNotifications` |
 
 ## Terraform State
 
-State is stored in S3 (not locally):
-
-```
-s3://terraform-state-weirdo-bucket-REDACTED_ACCOUNT_ID/terraform.tfstate
-```
+State is stored in S3 (not locally) in a dedicated bucket with public access blocked.
 
 Locking is enabled via `use_lockfile`, preventing concurrent modifications.
 
